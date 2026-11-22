@@ -2,7 +2,7 @@ import irsim
 import matplotlib.pyplot as plt
 
 
-env = irsim.make("robot_world.yaml")
+env = irsim.make("boids/robot_world.yaml")
 env.load_behavior("boids.boids")      # boids/boids.py
 env.load_behavior("boids.predator")   # boids/predator.py
 

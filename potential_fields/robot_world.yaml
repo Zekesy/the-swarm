@@ -1,0 +1,55 @@
+world:
+  height: 50
+  width: 50
+  step_time: 0.1
+  sample_time: 0.1
+  offset: [0, 0]
+  collision_mode: 'unobstructed'
+
+robot:
+  - kinematics: {name: omni}
+    shape: {name: circle, radius: 0.5}
+    state: [3, 3, 0]
+    goal: [46, 46, 0]
+    goal_threshold: 0.3
+    vel_max: [3.0, 3.0]
+    vel_min: [-3.0, -3.0]
+    color: royalblue
+    behavior:
+      name: potential-fields
+      target_roles: obstacle
+      velocity_max: 3.0
+      attraction_gain: 1.0
+      goal_distance_threshold: 5.0
+      repulsion_gain: 20.0
+      influence_range: 4.0
+    plot:
+      show_trajectory: true
+      show_goal: true
+
+obstacle:
+  # Pillars (circles)
+  - number: 4
+    distribution: {name: manual}
+    state: [[12, 10, 0], [20, 22, 0], [32, 16, 0], [38, 34, 0]]
+    shape:
+      - {name: circle, radius: 1.5}
+      - {name: circle, radius: 2.0}
+      - {name: circle, radius: 1.0}
+      - {name: circle, radius: 2.5}
+
+  # Walls / blocks (rectangles)
+  - number: 2
+    distribution: {name: manual}
+    state: [[26, 32, 0.0], [10, 28, 0.785]]
+    shape:
+      - {name: rectangle, length: 8.0, width: 1.5}
+      - {name: rectangle, length: 4.0, width: 4.0}
+
+  # Triangles (polygons)
+  - number: 2
+    distribution: {name: manual}
+    state: [[22, 8, 0], [40, 24, 0]]
+    shape:
+      - {name: polygon, vertices: [[-2, -1.5], [2, -1.5], [0, 2]]}
+      - {name: polygon, vertices: [[-1.5, -2], [2, 0], [-1.5, 2]]}
