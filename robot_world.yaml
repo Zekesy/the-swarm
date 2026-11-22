@@ -1,0 +1,57 @@
+world:
+  height: 50
+  width: 50
+  step_time: 0.1
+  sample_time: 0.1
+  offset: [0, 0]
+  collision_mode: 'unobstructed'
+
+robot:
+  - number: 50
+    vel_max: [3.5, 3.5]
+    vel_min: [-3.5, -3.5]
+    distribution:
+      name: random
+      range_low: [0.0, 0.0, -3.14]
+      range_high: [40.0, 40.0, 3.14]
+      min_distance: 5.0
+    kinematics: {name: omni}
+    shape: {name: circle, radius: 0.5}
+    group_behavior:
+      name: boids
+      target_roles: robot
+      perception_radius: 5.0
+      velocity_max: 4.0
+      separation_weight: 4.0
+      alignment_weight: 3.0
+      cohesion_weight: 0.5
+      safe_distance: 2.0
+      goal_position: [25,25]
+      goal_radius: 20.0
+      goal_weight: 0.3
+      cruise_speed: 3.0
+      flee_radius: 8.0
+    plot:
+      show_trajectory: false
+      show_goal: false
+  - number: 2
+    distribution: 
+      name: random
+      range_low: [5, 5, -3.14]
+      range_high: [45, 45, 3.14]
+      min_distance: 10.0
+    kinematics: {name: omni}
+    shape: {name: circle, radius: 0.8}
+    color: red
+    vel_max: [3.0, 3.0]
+    vel_min: [-3.0, -3.0]
+    group_behavior:
+      name: predator
+      target_roles: robot
+      velocity_max: 2.8
+      hunt_radius: 8.0
+      center_position: [25,25]
+      patrol_speed: 1.8
+    plot:
+      show_trajectory: false
+      show_goal: false
