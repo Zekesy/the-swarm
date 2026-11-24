@@ -4,7 +4,9 @@ import numpy as np
 from irsim.lib.behavior.behavior_registry import register_group_behavior
 from irsim.world.object_base import ObjectBase
 
-from .helpers import limit, get_velocity, boundary_recovery, clamp_speed
+from commons.helpers import (
+    get_position, get_velocity, with_behavior, limit, clamp_speed, find_neighbors, boundary_recovery,
+)
 
 ##### Predator
 @register_group_behavior("omni", "predator")
@@ -15,7 +17,6 @@ def predator(members: list[ObjectBase], **kwargs: Any) -> list[np.ndarray]:
     vel_max = kwargs.get("velocity_max", 3.0)
     vel_min = kwargs.get("velocity_min", 1.0)
     max_force = kwargs.get("max_force", 0.3)
-    perception_radius = kwargs.get("perception_radius", 8.0)
 
     bounds = kwargs.get("bounds", [0.0, 0.0, 50.0, 50.0])
     boundary_margin = kwargs.get("boundary_margin", 0.0)
@@ -29,18 +30,9 @@ def predator(members: list[ObjectBase], **kwargs: Any) -> list[np.ndarray]:
     separation_weight = kwargs.get("separation_weight", 3.0)
     separation_force = kwargs.get("separation_force", 0.3)    # own budget
 
-    prey = [
-        obj for obj in kwargs.get("external_objects", [])
-        if obj.group_behavior_dict.get("name") == "boids"
-    ]
-
-    predator_positions = np.array(
-        [np.asarray(m.state[:2, 0], dtype=float).reshape(2) for m in members]
-    )
-
-    prey_positions = np.array(
-        [np.asarray(p.state[:2, 0], dtype=float).reshape(2) for p in prey]
-    ).reshape(-1, 2)
+    prey = with_behavior(kwargs.get("external_objects", []), "boids")
+    predator_positions = np.array([get_position(m) for m in members])
+    prey_positions = np.array([get_position(p) for p in prey]).reshape(-1, 2)
 
     targets = assign_targets(predator_positions, prey_positions, hunt_radius)
 
@@ -85,21 +77,6 @@ def predator(members: list[ObjectBase], **kwargs: Any) -> list[np.ndarray]:
 
     return velocities
 
-def find_neighbors(primary: ObjectBase, members:list[ObjectBase], perception_radius) -> list[ObjectBase]:
-    primary_pos = primary.state[:2, 0]
-
-    neighbors = []
-    for member in members:
-        member_pos = member.state[:2, 0]
-        distance = np.linalg.norm(primary_pos - member_pos)
-
-        if not (0 < distance < perception_radius):
-            continue
-        
-        neighbors.append(member)
-
-    return neighbors
-
 def assign_targets(predator_positions: np.ndarray, prey_positions: np.ndarray, hunt_radius) -> list:
     """Greedy one-to-one matching of predators to boids.
 
@@ -132,10 +109,10 @@ def separation(primary: ObjectBase, neighbors: list[ObjectBase]) -> np.ndarray:
         return np.zeros(2)
     
     repulsion_vector = np.zeros(2)
-    primary_pos = primary.state[:2, 0]
+    primary_pos = get_position(primary)
 
     for neighbor in neighbors:
-        neighbor_pos = neighbor.state[:2, 0]
+        neighbor_pos = get_position(neighbor)
         difference = primary_pos - neighbor_pos
         distance = np.linalg.norm(difference)
 

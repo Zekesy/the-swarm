@@ -1,0 +1,39 @@
+# Narrow passage: a wall with a 3-unit gap. The robot is only 1 unit wide,
+# so it fits easily, but the fields of both gap edges overlap and push it
+# back. (With these gains, a 4-unit gap is passable: try changing it.)
+world:
+  height: 50
+  width: 50
+  step_time: 0.1
+  sample_time: 0.1
+  offset: [0, 0]
+  collision_mode: 'unobstructed'
+
+robot:
+  - kinematics: {name: omni}
+    shape: {name: circle, radius: 0.5}
+    state: [8, 25, 0]
+    goal: [42, 25, 0]
+    goal_threshold: 0.3
+    vel_max: [3.0, 3.0]
+    vel_min: [-3.0, -3.0]
+    color: royalblue
+    behavior:
+      name: potential-fields
+      target_roles: obstacle
+      velocity_max: 3.0
+      attraction_gain: 1.0
+      goal_distance_threshold: 5.0
+      repulsion_gain: 20.0
+      influence_range: 4.0
+    plot:
+      show_trajectory: true
+      show_goal: true
+
+obstacle:
+  - number: 2
+    distribution: {name: manual}
+    state: [[25, 11.75, 0], [25, 38.25, 0]]
+    shape:
+      - {name: rectangle, length: 1.0, width: 23.5}   # lower wall: y = 0 to 23.5
+      - {name: rectangle, length: 1.0, width: 23.5}   # upper wall: y = 26.5 to 50

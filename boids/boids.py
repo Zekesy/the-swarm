@@ -4,7 +4,9 @@ import numpy as np
 from irsim.lib.behavior.behavior_registry import register_group_behavior
 from irsim.world.object_base import ObjectBase
 
-from .helpers import limit, get_velocity, boundary_recovery, clamp_speed
+from commons.helpers import (
+    get_position, get_velocity, with_behavior, limit, clamp_speed, find_neighbors, boundary_recovery,
+)
 
 @register_group_behavior("omni", "boids")
 def boids(members: list[ObjectBase], **kwargs: Any) -> list[np.ndarray]:
@@ -40,14 +42,11 @@ def boids(members: list[ObjectBase], **kwargs: Any) -> list[np.ndarray]:
     flee_force = kwargs.get("flee_force", 0.8)
     wall_force = kwargs.get("wall_force", 1.0)
 
-    predators = [
-        obj for obj in kwargs.get("external_objects", [])
-        if obj.group_behavior_dict.get("name") == "predator"
-    ]
+    predators = with_behavior(kwargs.get("external_objects", []), "predator")
 
     velocities = []
     for member in members:
-        current_pos = np.asarray(member.state[:2, 0], dtype=float).reshape(2)
+        current_pos = get_position(member)
         current_velocity = get_velocity(member, vel_min)
 
         # Separation sees all birds since bird behind you can sitll hit you
@@ -87,53 +86,13 @@ def boids(members: list[ObjectBase], **kwargs: Any) -> list[np.ndarray]:
     return velocities
 
 
-##### Helpers
-def find_neighbors(
-    primary: ObjectBase, 
-    members: list[ObjectBase], 
-    perception_radius=5.0,
-    heading=None,
-    fov_deg=360
-) -> list[ObjectBase]:
-    """Neighbors within perception_radius. If `heading` (a world-frame direction,
-    e.g. the bird's velocity) is given, only birds inside the field of view
-    `fov_deg` centered on that heading count. 180 = only birds in front."""
-
-    # omni -> returns [x,y theta]
-    primary_pos = primary.state[:2, 0]
-
-    use_fov = heading is not None and fov_deg < 360 and np.linalg.norm(heading) > 1e-6
-
-    if use_fov:
-        forward = np.asarray(heading, dtype=float).reshape(2)
-        forward = forward / np.linalg.norm(forward)
-        cos_half_fov = np.cos(np.radians(fov_deg) / 2.0)
-    
-    neighbors = []
-    for member in members:
-        member_pos = member.state[:2, 0]
-        offset = member_pos - primary_pos
-        distance = np.linalg.norm(primary_pos - member_pos)
-
-        if not (0 < distance < perception_radius):
-            continue
-        
-        # angle between the facing direction and the direction to the neighbor
-        if use_fov and np.dot(forward, offset / distance) < cos_half_fov:
-            continue
-        
-        neighbors.append(member)
-
-    return neighbors
-
-
 ##### Rules
 def separation(primary: ObjectBase, neighbors: list[ObjectBase], safe_distance=2.0) -> np.ndarray:
     repulsion_vector = np.zeros(2)
-    primary_pos = primary.state[:2, 0]
+    primary_pos = get_position(primary)
 
     for neighbor in neighbors:
-        neighbor_pos = neighbor.state[:2, 0]
+        neighbor_pos = get_position(neighbor)
         difference = primary_pos - neighbor_pos
         distance = np.linalg.norm(difference)
 
@@ -158,7 +117,7 @@ def cohesion(position, velocity, neighbors: list[ObjectBase], perception_radius)
     '- velocity' term, so it bends the path without slowing the bird down.
     Strength grows from 0 (at the center) to 1 (at the edge of perception)."""
      
-    avg_neighbor_pos = np.mean([n.state[:2, 0] for n in neighbors], axis=0)
+    avg_neighbor_pos = np.mean([get_position(n) for n in neighbors], axis=0)
 
     direction = avg_neighbor_pos - position
     distance = np.linalg.norm(direction)
@@ -196,8 +155,7 @@ def flee(position, velocity, predators: list[ObjectBase], flee_radius, vel_max):
     The closer the predator, the stronger the push (urgency 0 -> 1)."""
     steer = np.zeros(2)
     for predator in predators:
-        predator_pos = np.asarray(predator.state[:2, 0], dtype=float).reshape(2)
-        away = position - predator_pos # arrow pointing away from predator
+        away = position - get_position(predator) # arrow pointing away from predator
         distance = np.linalg.norm(away)
 
         if distance < 1e-6 or distance > flee_radius:
